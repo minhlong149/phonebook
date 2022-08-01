@@ -39,6 +39,17 @@ app.get("/info", (request, response) => {
   response.send(entriesString);
 });
 
+// Display a single phone book entry info
+app.get("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id);
+  const phonebookInfo = phonebook.find((entry) => entry.id === id);
+  if (phonebookInfo) {
+    response.json(phonebookInfo);
+  } else {
+    response.status(404).end();
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
