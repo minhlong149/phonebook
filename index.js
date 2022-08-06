@@ -3,7 +3,26 @@ const app = express();
 
 // Logging messages using morgan middleware
 const morgan = require("morgan");
-app.use(morgan("tiny"));
+app.use(
+  morgan("tiny", {
+    skip: function (req, res) {
+      return req.method === "POST";
+    },
+  })
+);
+
+// Creating new tokens for logging data in HTTP POST requests
+morgan.token("data", (req, res) => JSON.stringify(req.body));
+app.use(
+  morgan(
+    ":method :url :status :res[content-length] - :response-time ms :data",
+    {
+      skip: function (req, res) {
+        return req.method !== "POST";
+      },
+    }
+  )
+);
 
 let phonebook = [
   {
@@ -80,7 +99,7 @@ app.post("/api/persons", (request, response) => {
     });
   }
 
-  const nameExist = phonebook.some((entry) => entry.name === body.name); ;
+  const nameExist = phonebook.some((entry) => entry.name === body.name);
   if (nameExist) {
     return response.status(400).json({
       error: "name must be unique",
