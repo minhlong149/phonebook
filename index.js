@@ -1,6 +1,10 @@
 const express = require("express");
 const app = express();
 
+// Logging messages using morgan middleware
+const morgan = require("morgan");
+app.use(morgan("tiny"));
+
 let phonebook = [
   {
     id: 1,
