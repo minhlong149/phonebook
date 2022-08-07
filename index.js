@@ -24,6 +24,10 @@ app.use(
   )
 );
 
+// Allow requests from other origins 
+const cors = require("cors");
+app.use(cors());
+
 let phonebook = [
   {
     id: 1,
