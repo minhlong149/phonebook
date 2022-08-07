@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 
+app.use(express.static("build"));
+
 // Logging messages using morgan middleware
 const morgan = require("morgan");
 app.use(
