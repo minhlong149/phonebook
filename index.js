@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 
+const Person = require("./models/person");
+
 app.use(express.static("build"));
 
 // Logging messages using morgan middleware
@@ -32,66 +34,45 @@ app.use(
 const cors = require("cors");
 app.use(cors());
 
-let phonebook = [
-  {
-    id: 1,
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: 2,
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: 3,
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: 4,
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
-
 // Returns phone book list entries
-app.get("/api/persons", (request, response) => {
-  response.json(phonebook);
+app.get("/api/persons", async (request, response) => {
+  const phoneBookList = await Person.find({});
+  response.json(phoneBookList);
 });
 
 // Implement info page
-app.get("/info", (request, response) => {
-  const entriesNum = phonebook.length;
-  const entriesString = `
+app.get("/info", async (request, response) => {
+  const entriesNum = await Person.find({}).count();
+  const infoPage = `
     <p>Phone book has info for ${entriesNum} people</p>
     <p>${Date()}</p>
   `;
-  response.send(entriesString);
+  response.send(infoPage);
 });
 
 // Display a single phone book entry info
-app.get("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id);
-  const phonebookInfo = phonebook.find((entry) => entry.id === id);
-  if (phonebookInfo) {
-    response.json(phonebookInfo);
+app.get("/api/persons/:id", async (request, response) => {
+  const id = request.params.id;
+  const person = await Person.findById(id);
+
+  if (person) {
+    response.json(person);
   } else {
     response.status(404).end();
   }
 });
 
 // Delete a phonebook entry from a HTTP DELETE request
-app.delete("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id);
-  phonebook = phonebook.filter((entry) => entry.id !== id);
+app.delete("/api/persons/:id", async (request, response) => {
+  const id = request.params.id;
+  await Person.findByIdAndRemove(id);
   response.status(204).end();
 });
 
 // Add new phonebook entries
 app.use(express.json());
 
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", async (request, response) => {
   const body = request.body;
 
   // error handling
@@ -107,21 +88,19 @@ app.post("/api/persons", (request, response) => {
     });
   }
 
-  const nameExist = phonebook.some((entry) => entry.name === body.name);
-  if (nameExist) {
-    return response.status(400).json({
-      error: "name must be unique",
-    });
-  }
+  // At this stage,  users can create all phonebook entries.
+  // Phone book can have multiple entries with the same name.
 
-  const maxId = Math.floor(Math.random() * 1000);
-  const newEntry = {
-    id: maxId,
-    name: body.name,
-    number: body.number,
-  };
+  const name = body.name;
+  const number = body.number;
 
-  phonebook = phonebook.concat(newEntry);
+  const person = new Person({
+    name: name,
+    phoneNumber: number,
+  });
+
+  const newEntry = await person.save();
+  console.log(`added ${name} number ${number} to phonebook`);
   response.json(newEntry);
 });
 
