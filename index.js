@@ -41,32 +41,44 @@ app.get("/api/persons", async (request, response) => {
 });
 
 // Implement info page
-app.get("/info", async (request, response) => {
-  const entriesNum = await Person.find({}).count();
-  const infoPage = `
+app.get("/info", async (request, response, next) => {
+  try {
+    const entriesNum = await Person.find({}).count();
+    const infoPage = `
     <p>Phone book has info for ${entriesNum} people</p>
     <p>${Date()}</p>
   `;
-  response.send(infoPage);
+    response.send(infoPage);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Display a single phone book entry info
-app.get("/api/persons/:id", async (request, response) => {
-  const id = request.params.id;
-  const person = await Person.findById(id);
+app.get("/api/persons/:id", async (request, response, next) => {
+  try {
+    const id = request.params.id;
+    const person = await Person.findById(id);
 
-  if (person) {
-    response.json(person);
-  } else {
-    response.status(404).end();
+    if (person) {
+      response.json(person);
+    } else {
+      response.status(404).end();
+    }
+  } catch (error) {
+    next(error);
   }
 });
 
 // Delete a phonebook entry from a HTTP DELETE request
-app.delete("/api/persons/:id", async (request, response) => {
-  const id = request.params.id;
-  await Person.findByIdAndRemove(id);
-  response.status(204).end();
+app.delete("/api/persons/:id", async (request, response, next) => {
+  try {
+    const id = request.params.id;
+    await Person.findByIdAndRemove(id);
+    response.status(204).end();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Add new phonebook entries
@@ -74,15 +86,17 @@ app.use(express.json());
 
 app.post("/api/persons", async (request, response) => {
   const body = request.body;
+  const name = body.name;
+  const number = body.number;
 
   // error handling
-  if (!body.name) {
+  if (!name) {
     return response.status(400).json({
       error: "name missing",
     });
   }
 
-  if (!body.number) {
+  if (!number) {
     return response.status(400).json({
       error: "number missing",
     });
@@ -91,8 +105,8 @@ app.post("/api/persons", async (request, response) => {
   // At this stage,  users can create all phonebook entries.
   // Phone book can have multiple entries with the same name.
 
-  const name = body.name;
-  const number = body.number;
+  // TODO: Update the phone number for a person whose name is already existed
+  // by making an HTTP PUT request to the entry's unique URL.
 
   const person = new Person({
     name: name,
@@ -103,6 +117,60 @@ app.post("/api/persons", async (request, response) => {
   console.log(`added ${name} number ${number} to phonebook`);
   response.json(newEntry);
 });
+
+// Updating an individual note
+app.put("/api/notes/:id", async (request, response, next) => {
+  try {
+    const body = request.body;
+    const name = body.name;
+    const number = body.number;
+
+    // error handling
+    if (!name) {
+      return response.status(400).json({
+        error: "name missing",
+      });
+    }
+
+    if (!number) {
+      return response.status(400).json({
+        error: "number missing",
+      });
+    }
+
+    const person = {
+      name: name,
+      phoneNumber: number,
+    };
+
+    const id = request.params.id;
+    const updatedPerson = await Person.findByIdAndUpdate(id, person, {
+      new: true,
+    });
+    response.json(updatedPerson);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "unknown endpoint" });
+};
+
+// handler of requests with unknown endpoint
+app.use(unknownEndpoint);
+
+// Error handlers middleware
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformatted id" });
+  }
+  next(error);
+};
+
+// this has to be the last loaded middleware.
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
