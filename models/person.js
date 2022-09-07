@@ -13,9 +13,17 @@ mongoose
     console.log("Error connecting to MongoDB:", error.message);
   });
 
+// Name has to be at least three characters long
 const personSchema = new mongoose.Schema({
-  name: String,
-  phoneNumber: String,
+  name: {
+    type: String,
+    minLength: 3,
+    required: true,
+  },
+  phoneNumber: {
+    type: String,
+    required: true,
+  },
 });
 
 personSchema.set("toJSON", {
